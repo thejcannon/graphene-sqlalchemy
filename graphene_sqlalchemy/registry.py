@@ -3,6 +3,7 @@ class Registry(object):
         self._registry = {}
         self._registry_models = {}
         self._registry_composites = {}
+        self._registry_enums = {}
 
     def register(self, cls):
         from .types import SQLAlchemyObjectType
@@ -11,7 +12,9 @@ class Registry(object):
             "Only classes of type SQLAlchemyObjectType can be registered, "
             'received "{}"'
         ).format(cls.__name__)
-        assert cls._meta.registry == self, "Registry for a Model have to match."
+        assert (
+            cls._meta.registry == self
+        ), "Registry for a Model have to match."
         # assert self.get_type_for_model(cls._meta.model) in [None, cls], (
         #     'SQLAlchemy model "{}" already associated with '
         #     'another type "{}".'
@@ -26,6 +29,12 @@ class Registry(object):
 
     def get_converter_for_composite(self, composite):
         return self._registry_composites.get(composite)
+
+    def register_type_for_enum(self, enum_type_name, graphene_enum):
+        self._registry_enums[enum_type_name] = graphene_enum
+
+    def get_type_for_enum(self, enum_type_name):
+        return self._registry_enums.get(enum_type_name)
 
 
 registry = None

@@ -147,12 +147,25 @@ def convert_column_to_float(type, column, registry=None):
 @convert_sqlalchemy_type.register(types.Enum)
 def convert_enum_to_enum(type, column, registry=None):
     enum_class = getattr(type, 'enum_class', None)
-    if enum_class:  # Check if an enum.Enum type is used
-        graphene_type = Enum.from_enum(enum_class)
-    else:  # Nope, just a list of string options
-        items = zip(type.enums, type.enums)
-        graphene_type = Enum(type.name, items)
-    return graphene_type(
+    if enum_class:
+        enum_name = type.enum_class.__name__
+    else:
+        enum_name = type.name
+
+    enum_type = None
+    if registry is not None:
+        enum_type = registry.get_type_for_enum(enum_name)
+    if enum_type is None:
+        enum_class = getattr(type, 'enum_class', None)
+        if enum_class:  # Check if an enum.Enum type is used
+            enum_type = Enum.from_enum(enum_class)
+        else:  # Nope, just a list of string options
+            items = zip(type.enums, type.enums)
+            enum_type = Enum(enum_name, items)
+        if registry is not None:
+            registry.register_type_for_enum(enum_name, enum_type)
+
+    return enum_type(
         description=get_column_doc(column),
         required=not (is_column_nullable(column)),
     )
@@ -162,11 +175,23 @@ def convert_enum_to_enum(type, column, registry=None):
 def convert_column_to_enum(type_, column, registry=None):
     is_enum = isinstance(type_.choices, type)
     if is_enum:
-        graphene_type = Enum.from_enum(type_.choices)
+        enum_name = type_.choices.__name__
     else:
-        name = "{}_{}".format(column.table.name, column.name).upper()
-        graphene_type = Enum(name, type_.choices)
-    return graphene_type(
+        enum_name = "{}_{}".format(column.table.name, column.name).upper()
+
+    enum_type = None
+    if registry is not None:
+        enum_type = registry.get_type_for_enum(enum_name)
+
+    if enum_type is None:
+        if is_enum:
+            enum_type = Enum.from_enum(type_.choices)
+        else:
+            enum_type = Enum(enum_name, type_.choices)
+        if registry is not None:
+            registry.register_type_for_enum(enum_name, enum_type)
+
+    return enum_type(
         description=get_column_doc(column),
         required=not (is_column_nullable(column)),
     )
