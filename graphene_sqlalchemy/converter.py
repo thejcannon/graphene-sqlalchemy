@@ -31,11 +31,17 @@ def convert_sqlalchemy_relationship(relationship, registry):
         if not _type:
             return None
         if direction == interfaces.MANYTOONE or not relationship.uselist:
-            return Field(_type)
+            return Field(
+                _type,
+                description=getattr(relationship.class_attribute, "__doc__", None),
+            )
         elif direction in (interfaces.ONETOMANY, interfaces.MANYTOMANY):
             if _type._meta.connection:
                 return createConnectionField(_type._meta.connection)
-            return Field(List(_type))
+            return Field(
+                List(_type),
+                description=getattr(relationship.class_attribute, "__doc__", None),
+            )
 
     return Dynamic(dynamic_type)
 
@@ -146,7 +152,7 @@ def convert_column_to_float(type, column, registry=None):
 
 @convert_sqlalchemy_type.register(types.Enum)
 def convert_enum_to_enum(type, column, registry=None):
-    enum_class = getattr(type, 'enum_class', None)
+    enum_class = getattr(type, "enum_class", None)
     if enum_class:
         enum_name = type.enum_class.__name__
     else:
@@ -156,7 +162,7 @@ def convert_enum_to_enum(type, column, registry=None):
     if registry is not None:
         enum_type = registry.get_type_for_enum(enum_name)
     if enum_type is None:
-        enum_class = getattr(type, 'enum_class', None)
+        enum_class = getattr(type, "enum_class", None)
         if enum_class:  # Check if an enum.Enum type is used
             enum_type = Enum.from_enum(enum_class)
         else:  # Nope, just a list of string options
@@ -166,8 +172,7 @@ def convert_enum_to_enum(type, column, registry=None):
             registry.register_type_for_enum(enum_name, enum_type)
 
     return enum_type(
-        description=get_column_doc(column),
-        required=not (is_column_nullable(column)),
+        description=get_column_doc(column), required=not (is_column_nullable(column))
     )
 
 
@@ -192,8 +197,7 @@ def convert_column_to_enum(type_, column, registry=None):
             registry.register_type_for_enum(enum_name, enum_type)
 
     return enum_type(
-        description=get_column_doc(column),
-        required=not (is_column_nullable(column)),
+        description=get_column_doc(column), required=not (is_column_nullable(column))
     )
 
 
