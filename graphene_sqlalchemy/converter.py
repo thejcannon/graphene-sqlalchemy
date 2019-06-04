@@ -34,13 +34,15 @@ def convert_sqlalchemy_relationship(relationship, registry):
             return Field(
                 _type,
                 description=getattr(relationship.class_attribute, "__doc__", None),
+                required=not relationship.local_remote_pairs[0][0].nullable,
             )
         elif direction in (interfaces.ONETOMANY, interfaces.MANYTOMANY):
             if _type._meta.connection:
                 return createConnectionField(_type._meta.connection)
             return Field(
-                List(_type),
+                List(_type, required=True),
                 description=getattr(relationship.class_attribute, "__doc__", None),
+                required=not relationship.local_remote_pairs[0][0].nullable,
             )
 
     return Dynamic(dynamic_type)
